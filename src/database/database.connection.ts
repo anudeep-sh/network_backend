@@ -11,7 +11,7 @@ const configs: IKnexConfig = {
       return {
         host: 'localhost',
         user: 'alakanav',
-        password: `}\/p;TF88:z0l[l^`,
+        password: `UP*v:#J/xGQTp_9H`,
         database: 'network',
         port: 5432,
       };
