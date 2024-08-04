@@ -9,10 +9,10 @@ const configs: IKnexConfig = {
     client: 'postgres',
     connection: async () => {
       return {
-        host: 'localhost',
-        user: 'alakanav',
-        password: `UP*v:#J/xGQTp_9H`,
-        database: 'network',
+        host: '34.170.105.45',
+        user: 'networks',
+        password: `??9Eit-^8e4}J*>7`,
+        database: 'networks',
         port: 5432,
       };
     },
