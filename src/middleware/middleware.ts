@@ -1,0 +1,22 @@
+import * as jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'SAI_RAM';
+
+export const authenticate = async (ctx: any, next: any) => {
+  const token = ctx.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    ctx.body = "Authentication token is required";
+    ctx.status = 401;
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    ctx.state.userPayload = decoded.userPayload;
+    await next();
+  } catch (err) {
+    ctx.body = "Invalid or expired token";
+    ctx.status = 401;
+  }
+};

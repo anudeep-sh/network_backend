@@ -1,0 +1,35 @@
+import * as Koa from 'koa';
+import * as Router from 'koa-router'
+import logger=require('koa-logger');
+import bodyparser=require('koa-bodyparser')
+import { NetworkController } from './controllers/controller';
+import { authenticate } from './middleware/middleware';
+
+const port=process.env.PORT || 7000
+
+const app=new Koa();
+const router=new Router();
+app.use(logger());
+app.use(bodyparser());
+
+router.get('/',async (ctx)=>{
+    ctx.body='Welcome to Koa';
+});
+
+const networkController = new NetworkController()
+
+router.post('/register',networkController.registerController);
+router.post('/login',networkController.loginController);
+router.get('/wallet', authenticate, networkController.getWalletDetails);
+router.get('/wallet-history',authenticate,networkController.getWalletHistoryDetails);
+router.post('/add-hub',authenticate, networkController.addHUBController);
+router.post('/network',authenticate,networkController.joinController);
+router.get('/get-hub',authenticate,networkController.getLevelsController);
+router.post('/withdrawal',authenticate,networkController.withdrawalController)
+router.patch('/update-withdrawal-request',authenticate,networkController.updateWithDrawalRequest)
+router.get('/withdrawals-list/:status',authenticate,networkController.withdrawalList)
+
+app.use(router.routes());
+app.listen(port);
+
+console.log(` My koa server is up and listening on port ${port}`)
