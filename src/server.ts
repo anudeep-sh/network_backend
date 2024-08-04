@@ -5,7 +5,7 @@ import bodyparser=require('koa-bodyparser')
 import { NetworkController } from './controllers/controller';
 import { authenticate } from './middleware/middleware';
 
-const port=process.env.PORT || 7000
+const port=process.env.PORT || 8080
 
 const app=new Koa();
 const router=new Router();

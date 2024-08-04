@@ -1,0 +1,31 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const Koa = require("koa");
+const Router = require("koa-router");
+const logger = require("koa-logger");
+const bodyparser = require("koa-bodyparser");
+const controller_1 = require("./controllers/controller");
+const middleware_1 = require("./middleware/middleware");
+const port = process.env.PORT || 8080;
+const app = new Koa();
+const router = new Router();
+app.use(logger());
+app.use(bodyparser());
+router.get('/', async (ctx) => {
+    ctx.body = 'Welcome to Koa';
+});
+const networkController = new controller_1.NetworkController();
+router.post('/register', networkController.registerController);
+router.post('/login', networkController.loginController);
+router.get('/wallet', middleware_1.authenticate, networkController.getWalletDetails);
+router.get('/wallet-history', middleware_1.authenticate, networkController.getWalletHistoryDetails);
+router.post('/add-hub', middleware_1.authenticate, networkController.addHUBController);
+router.post('/network', middleware_1.authenticate, networkController.joinController);
+router.get('/get-hub', middleware_1.authenticate, networkController.getLevelsController);
+router.post('/withdrawal', middleware_1.authenticate, networkController.withdrawalController);
+router.patch('/update-withdrawal-request', middleware_1.authenticate, networkController.updateWithDrawalRequest);
+router.get('/withdrawals-list/:status', middleware_1.authenticate, networkController.withdrawalList);
+app.use(router.routes());
+app.listen(port);
+console.log(` My koa server is up and listening on port ${port}`);
+//# sourceMappingURL=server.js.map
