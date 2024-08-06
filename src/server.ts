@@ -11,7 +11,11 @@ const port=process.env.PORT || 8080
 const app=new Koa();
 const router=new Router();
 app.use(logger());
-app.use(cors({ origin: '*' })); // Explicitly allow all origins
+app.use(cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'Accept']
+  })); // Explicitly allow all origins
 app.use(bodyparser());
 
 router.get('/',async (ctx)=>{
