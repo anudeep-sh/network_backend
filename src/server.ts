@@ -4,12 +4,14 @@ import logger=require('koa-logger');
 import bodyparser=require('koa-bodyparser')
 import { NetworkController } from './controllers/controller';
 import { authenticate } from './middleware/middleware';
+import cors = require('@koa/cors');
 
 const port=process.env.PORT || 8080
 
 const app=new Koa();
 const router=new Router();
 app.use(logger());
+app.use(cors());
 app.use(bodyparser());
 
 router.get('/',async (ctx)=>{
