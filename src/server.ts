@@ -11,7 +11,14 @@ const port=process.env.PORT || 8080
 const app=new Koa();
 const router=new Router();
 app.use(logger());
-app.use(cors());
+app.use(cors({
+    origin: (ctx) => {
+        if (ctx.request.header.origin === 'http://localhost:3000') {
+            return ctx.request.header.origin; // Allow requests from localhost:3000
+        }
+        return ''; // Disallow all other origins
+    }
+}));
 app.use(bodyparser());
 
 router.get('/',async (ctx)=>{
