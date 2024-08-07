@@ -11,9 +11,13 @@ const port = process.env.PORT || 8080;
 const app = new Koa();
 const router = new Router();
 
-
 app.use(bodyparser());
-app.use(cors());
+app.use(cors({
+    origin: '*', // Adjust according to your security needs
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE','PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    credentials: true, // Allows cookies to be sent
+}));
 app.use(logger());
 
 router.get('/', async (ctx) => {
@@ -32,7 +36,7 @@ router.get('/get-hub', authenticate, networkController.getLevelsController);
 router.post('/withdrawal', authenticate, networkController.withdrawalController);
 router.patch('/update-withdrawal-request', authenticate, networkController.updateWithDrawalRequest);
 router.get('/withdrawals-list/:status', authenticate, networkController.withdrawalList);
-router.get('/api/network',authenticate,networkController.networkController)
+router.get('/api/network', authenticate, networkController.networkController)
 
 app.use(router.routes());
 app.listen(port);
