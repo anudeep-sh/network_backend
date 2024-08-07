@@ -11,19 +11,10 @@ const port = process.env.PORT || 8080;
 const app = new Koa();
 const router = new Router();
 
-app.use(async (ctx, next) => {
-    if (ctx.method === 'OPTIONS') {
-        ctx.status = 204;
-        ctx.set('Access-Control-Allow-Origin', '*');
-        ctx.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-        ctx.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    } else {
-        await next();
-    }
-});
 
-app.use(logger());
 app.use(bodyparser());
+app.use(cors());
+app.use(logger());
 
 router.get('/', async (ctx) => {
     ctx.body = 'Welcome to Koa';
