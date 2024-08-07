@@ -73,6 +73,43 @@ export class NetworkController implements INetwork {
     }
   };
 
+  networkController = async (ctx: any) => {
+    try {
+      const users = await knex("users").select(
+        "id",
+        "name",
+        "emailId",
+        "shortcode"
+      ).returning("*");
+      const network = await knex("network").select("user_id", "referrer_id").returning("*");
+
+      const userMap = new Map();
+      users.forEach((user) => {
+        userMap.set(user.id, { ...user, children: [] });
+      });
+
+      network.forEach((connection) => {
+        const user = userMap.get(connection.user_id);
+        const referrer = userMap.get(connection.referrer_id);
+        if (referrer) {
+          referrer.children.push(user);
+        }
+      });
+
+      const rootNodes: any = [];
+      userMap.forEach((user) => {
+        if (!network.some((connection) => connection.user_id === user.id)) {
+          rootNodes.push(user);
+        }
+      });
+
+      ctx.body = { data: rootNodes };
+    } catch (err: any) {
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
+    }
+  };
+
   getWalletDetails = async (ctx: any) => {
     try {
       const userDetails = ctx.state.userPayload;
