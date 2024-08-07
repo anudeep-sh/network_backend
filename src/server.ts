@@ -11,13 +11,16 @@ const port = process.env.PORT || 8080;
 const app = new Koa();
 const router = new Router();
 
-// CORS Configuration
-app.use(cors({
-  origin: '*', // Adjust as needed for security
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400, // Cache preflight response for 24 hours
-}));
+app.use(async (ctx, next) => {
+    if (ctx.method === 'OPTIONS') {
+        ctx.status = 204;
+        ctx.set('Access-Control-Allow-Origin', '*');
+        ctx.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+        ctx.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } else {
+        await next();
+    }
+});
 
 app.use(logger());
 app.use(bodyparser());
