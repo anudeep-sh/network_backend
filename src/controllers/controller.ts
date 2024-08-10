@@ -92,7 +92,13 @@ export class NetworkController implements INetwork {
         const user = userMap.get(connection.user_id);
         const referrer = userMap.get(connection.referrer_id);
         if (referrer) {
-          referrer.children.push(user);
+          referrer.children.push({
+            ...user,
+            attributes: {
+              email: user.emailId,
+              shortcode: user.shortcode,
+            }
+          });
         }
       });
 
