@@ -24,21 +24,28 @@ router.get('/', async (ctx) => {
     ctx.body = 'Welcome to Koa';
 });
 
-const networkController = new NetworkController();
-
-router.post('/register', networkController.registerController);
-router.post('/login', networkController.loginController);
+const networkController = new NetworkController()
+router.post('/register',networkController.registerController);
+router.post('/login',networkController.loginController);
 router.get('/wallet', authenticate, networkController.getWalletDetails);
-router.get('/wallet-history', authenticate, networkController.getWalletHistoryDetails);
-router.post('/add-hub', authenticate, networkController.addHUBController);
-router.post('/network', authenticate, networkController.joinController);
-router.get('/get-hub', authenticate, networkController.getLevelsController);
-router.post('/withdrawal', authenticate, networkController.withdrawalController);
-router.patch('/update-withdrawal-request', authenticate, networkController.updateWithDrawalRequest);
-router.get('/withdrawals-list/:status', authenticate, networkController.withdrawalList);
-router.get('/api/network', authenticate, networkController.networkController)
+router.get('/wallet-history',authenticate,networkController.getWalletHistoryDetails);
+router.post('/add-hub',authenticate, networkController.addHUBController);
+router.post('/network',authenticate,networkController.joinController);
+router.get('/get-hub',authenticate,networkController.getLevelsController);
+router.post('/withdrawal',authenticate,networkController.withdrawalController)
+router.get('/withdrawal',authenticate,networkController.getWithdrawals)
+
+// admin
+router.patch('/update-withdrawal-request',authenticate,networkController.updateWithDrawalRequest)
+router.get('/withdrawals-list/:status',authenticate,networkController.withdrawalList)
+router.patch('/update-quota', authenticate,networkController.updateQuotaController);
+router.post('/post-quota', authenticate,networkController.postQuotaController);
+
+router.get('/api/network',authenticate,networkController.networkController)
+router.get('/get-quotas',authenticate, networkController.getQuotasController);
+router.get('/get-quota/:userId',authenticate, networkController.getQuotaByUserIdController);
 
 app.use(router.routes());
 app.listen(port);
 
-console.log(`My Koa server is up and listening on port ${port}`);
+console.log(` My koa server is up and listening on port ${port}`)

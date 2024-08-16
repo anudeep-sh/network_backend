@@ -28,13 +28,16 @@ export class NetworkController implements INetwork {
       const wallet = await knex("wallet_history")
         .insert({ id: uuidv4(), user_id: id, amount: 0.0, type: Type.CREDIT })
         .returning("*");
+      const userQuota = await knex("user_quota")
+        .insert({ id: uuidv4(), user_id: id })
+        .returning("*");
 
       // Generate JWT token
       newUser[0].password = "";
       const token = jwt.sign({ userPayload: newUser[0] }, "SAI_RAM", {
         expiresIn: "24h", // Set the token expiration time
       });
-      ctx.body = { user: newUser[0], token, wallet: wallet[0] };
+      ctx.body = { user: newUser[0], token, wallet: wallet[0], userQuota };
     } catch (err: any) {
       ctx.body = "Internal Server Error";
       ctx.status = 500;
@@ -60,12 +63,27 @@ export class NetworkController implements INetwork {
         return;
       }
       user[0].password = "";
+      let hubDetails: any;
+
+      try {
+        const networkEntry = await knex("network")
+          .where({ user_id: user[0].id })
+          .first();
+
+        if (networkEntry && networkEntry.hub_id) {
+          hubDetails = await knex("hub")
+            .where({ id: networkEntry.hub_id })
+            .first();
+        }
+      } catch (err) {
+        console.log(err);
+      }
 
       // Generate JWT token
       const token = jwt.sign({ userPayload: user[0] }, "SAI_RAM", {
         expiresIn: "24h", // Set the token expiration time
       });
-      ctx.body = { user, token };
+      ctx.body = { user, token, hubDetails };
     } catch (err: any) {
       console.error(err);
       ctx.body = "Internal Server Error";
@@ -73,44 +91,37 @@ export class NetworkController implements INetwork {
     }
   };
 
-  networkController = async (ctx: any) => {
+  getQuotaByUserIdController = async (ctx: any) => {
     try {
-      const users = await knex("users").select(
-        "id",
-        "name",
-        "emailId",
-        "shortcode"
-      ).returning("*");
-      const network = await knex("network").select("user_id", "referrer_id").returning("*");
+      const { userId } = ctx.params;
 
-      const userMap = new Map();
-      users.forEach((user) => {
-        userMap.set(user.id, { ...user, children: [] });
-      });
+      // Query to get quota and user details for the specific user_id
+      const quota = await knex("user_quota")
+        .select(
+          "user_quota.quota",
+          "users.id",
+          "users.shortcode",
+          "users.name",
+          "users.emailId",
+          "users.status",
+          "users.timestamp"
+        )
+        .leftJoin("users", "user_quota.user_id", "users.id")
+        .where("user_quota.user_id", userId)
+        .first(); // Using .first() to get a single record
 
-      network.forEach((connection) => {
-        const user = userMap.get(connection.user_id);
-        const referrer = userMap.get(connection.referrer_id);
-        if (referrer) {
-          referrer.children.push({
-            ...user,
-            attributes: {
-              email: user.emailId,
-              shortcode: user.shortcode,
-            }
-          });
-        }
-      });
+      if (!quota) {
+        ctx.body = {
+          error: "User not found or no quota available for this user",
+        };
+        ctx.status = 404;
+        return;
+      }
 
-      const rootNodes: any = [];
-      userMap.forEach((user) => {
-        if (!network.some((connection) => connection.user_id === user.id)) {
-          rootNodes.push(user);
-        }
-      });
-
-      ctx.body = { data: rootNodes };
+      ctx.body = { quota };
+      ctx.status = 200;
     } catch (err: any) {
+      console.error(err);
       ctx.body = "Internal Server Error";
       ctx.status = 500;
     }
@@ -213,6 +224,16 @@ export class NetworkController implements INetwork {
         ctx.body = { membershipDetails: "Successfully referred" };
         ctx.status = 201;
       } else {
+        // Fetch the referrer's current quota
+        const userQuota = await knex("user_quota")
+          .where({ user_id: referralPayload.id })
+          .first();
+
+        if (!userQuota || userQuota.quota <= 0) {
+          ctx.body = "You do not have enough quota to refer a new member";
+          ctx.status = 400;
+          return;
+        }
         const fetchUserNetworkDetails = await knex("network")
           .where({ user_id: referralPayload.id })
           .returning("*");
@@ -264,6 +285,11 @@ export class NetworkController implements INetwork {
           type: Type.CREDIT,
         });
 
+        // Reduce the referrer's quota
+        await knex("user_quota")
+          .where({ user_id: referralPayload.id })
+          .decrement("quota", 1);
+
         await this.updateWalletDetails(userDetails, hubDetails[0]?.price);
 
         ctx.body = { membershipDetails: membershipDetails[0] };
@@ -290,6 +316,152 @@ export class NetworkController implements INetwork {
 
       ctx.body = { level: newLevel[0] };
     } catch (err: any) {
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
+    }
+  };
+
+  networkController = async (ctx: any) => {
+    try {
+      const users = await knex("users")
+        .select("id", "name", "emailId", "shortcode")
+        .returning("*");
+      const network = await knex("network")
+        .select("user_id", "referrer_id")
+        .returning("*");
+
+      const userMap = new Map();
+      users.forEach((user) => {
+        userMap.set(user.id, { ...user, children: [] });
+      });
+
+      network.forEach((connection) => {
+        const user = userMap.get(connection.user_id);
+        const referrer = userMap.get(connection.referrer_id);
+        if (referrer) {
+          referrer.children.push({
+            ...user,
+            attributes: {
+              email: user.emailId,
+              shortcode: user.shortcode,
+            },
+          });
+        }
+      });
+
+      const rootNodes: any = [];
+      userMap.forEach((user) => {
+        if (!network.some((connection) => connection.user_id === user.id)) {
+          if (user.children.length > 0) rootNodes.push(user);
+        }
+      });
+
+      ctx.body = { data: rootNodes };
+    } catch (err: any) {
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
+    }
+  };
+
+  updateQuotaController = async (ctx: any) => {
+    try {
+      const { userId, amount } = ctx.request.body;
+
+      // Check if user exists
+      const userExists = await knex("users").where({ id: userId }).first();
+      if (!userExists) {
+        ctx.body = "User not found";
+        ctx.status = 404;
+        return;
+      }
+
+      // Check if user quota exists
+      const userQuota = await knex("user_quota")
+        .where({ user_id: userId })
+        .first();
+      if (!userQuota) {
+        // If quota doesn't exist, create a new entry with the provided amount
+        await knex("user_quota").insert({
+          id: uuidv4(),
+          user_id: userId,
+          quota: amount,
+        });
+      } else {
+        // If quota exists, update it with the provided amount (increment or decrement)
+        await knex("user_quota")
+          .where({ user_id: userId })
+          .update({
+            quota: knex.raw("?? + ?", ["quota", amount]), // Adjusts quota based on the amount
+          });
+      }
+
+      ctx.body = { message: "Quota updated successfully" };
+      ctx.status = 200;
+    } catch (err: any) {
+      console.error(err);
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
+    }
+  };
+
+  postQuotaController = async (ctx: any) => {
+    try {
+      const { userId, quota } = ctx.request.body;
+
+      // Check if user exists
+      const userExists = await knex("users").where({ id: userId }).first();
+      if (!userExists) {
+        ctx.body = "User not found";
+        ctx.status = 404;
+        return;
+      }
+
+      // Check if user quota exists
+      const userQuota = await knex("user_quota")
+        .where({ user_id: userId })
+        .first();
+      if (!userQuota) {
+        // If quota doesn't exist, create a new entry with the provided quota
+        await knex("user_quota").insert({
+          id: uuidv4(),
+          user_id: userId,
+          quota: quota, // Set the quota value as provided
+        });
+      } else {
+        // If quota exists, update it with the new quota value
+        await knex("user_quota")
+          .where({ user_id: userId })
+          .update({ quota: quota });
+      }
+
+      ctx.body = { message: "Quota set successfully" };
+      ctx.status = 200;
+    } catch (err: any) {
+      console.error(err);
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
+    }
+  };
+
+  getQuotasController = async (ctx: any) => {
+    try {
+      // Query to get quotas with user details
+      const quotas = await knex("user_quota")
+        .select(
+          "user_quota.quota",
+          "users.id",
+          "users.shortcode",
+          "users.name",
+          "users.emailId",
+          "users.status",
+          "users.timestamp"
+        )
+        .leftJoin("users", "user_quota.user_id", "users.id");
+
+      ctx.body = { quotas };
+      ctx.status = 200;
+    } catch (err: any) {
+      console.error(err);
       ctx.body = "Internal Server Error";
       ctx.status = 500;
     }
@@ -331,6 +503,25 @@ export class NetworkController implements INetwork {
       ctx.status = 500;
     }
   };
+
+  getWithdrawals = async (ctx: any) => {
+    try {
+      // Fetch all withdrawal records for a specific user
+      const withdrawals = await knex('withdrawals')
+        .select('id', 'amount', 'status', 'timestamp')
+        .where({ user_id: ctx.state.userPayload.id })
+        .orderBy('timestamp', 'desc');
+  
+      // Send the response
+      ctx.body = withdrawals;
+      ctx.status = 200;
+    } catch (err) {
+      console.error('Error fetching withdrawals:', err);
+      ctx.body = 'Internal Server Error';
+      ctx.status = 500;
+    }
+  };
+  
 
   updateWithDrawalRequest = async (ctx: any) => {
     try {
