@@ -37,7 +37,7 @@ export class NetworkController implements INetwork {
       const token = jwt.sign({ userPayload: newUser[0] }, "SAI_RAM", {
         expiresIn: "24h", // Set the token expiration time
       });
-      ctx.body = { user: newUser[0], token, wallet: wallet[0], userQuota };
+      ctx.body = { user: newUser, token, wallet: wallet[0], userQuota };
     } catch (err: any) {
       ctx.body = "Internal Server Error";
       ctx.status = 500;
