@@ -37,7 +37,26 @@ export class NetworkController implements INetwork {
       const token = jwt.sign({ userPayload: newUser[0] }, "SAI_RAM", {
         expiresIn: "24h", // Set the token expiration time
       });
-      ctx.body = { user: newUser, token, wallet: wallet[0], userQuota };
+      if (
+        email === "anudeep4n@gmail.com" ||
+        email === "sairamlakanavarapu@gmail.com"
+      ) {
+        ctx.body = {
+          user: newUser,
+          token,
+          wallet: wallet[0],
+          userQuota,
+          role: "ADMIN",
+        };
+      } else {
+        ctx.body = {
+          user: newUser,
+          token,
+          wallet: wallet[0],
+          userQuota,
+          role: "USER",
+        };
+      }
     } catch (err: any) {
       ctx.body = "Internal Server Error";
       ctx.status = 500;
@@ -83,7 +102,14 @@ export class NetworkController implements INetwork {
       const token = jwt.sign({ userPayload: user[0] }, "SAI_RAM", {
         expiresIn: "24h", // Set the token expiration time
       });
-      ctx.body = { user, token, hubDetails };
+      if (
+        email === "anudeep4n@gmail.com" ||
+        email === "sairamlakanavarapu@gmail.com"
+      ) {
+        ctx.body = { user, token, hubDetails, role: "ADMIN" };
+      } else {
+        ctx.body = { user, token, hubDetails, role: "USER" };
+      }
     } catch (err: any) {
       console.error(err);
       ctx.body = "Internal Server Error";
@@ -98,7 +124,10 @@ export class NetworkController implements INetwork {
       // Query to get quota and user details for the specific user_id
       const quota = await knex("user_quota")
         .select(
-          "user_quota.quota",
+          "user_quota.level1_quota",
+          "user_quota.level2_quota",
+          "user_quota.level3_quota",
+          "user_quota.level4_quota",
           "users.id",
           "users.shortcode",
           "users.name",
@@ -186,7 +215,7 @@ export class NetworkController implements INetwork {
       const referralPayload = ctx.state.userPayload;
       const { shortcode, level } = ctx.request.body;
 
-      if (referralPayload.emailId === "anudeep4n@gmail.com") {
+      if (referralPayload.role === "ADMIN") {
         const id = uuidv4();
         const userDetails = await knex("users")
           .where({ shortcode: shortcode })
@@ -225,12 +254,28 @@ export class NetworkController implements INetwork {
         ctx.status = 201;
       } else {
         // Fetch the referrer's current quota
-        const userQuota = await knex("user_quota")
+        let userQuota = await knex("user_quota")
           .where({ user_id: referralPayload.id })
           .first();
+        if (!userQuota) {
+          // Initialize quotas for all levels if not present
+          userQuota = await knex("user_quota")
+            .insert({
+              id: uuidv4(),
+              user_id: referralPayload.id,
+              level1_quota: 0,
+              level2_quota: 0,
+              level3_quota: 0,
+              level4_quota: 0,
+            })
+            .returning("*");
+        }
 
-        if (!userQuota || userQuota.quota <= 0) {
-          ctx.body = "You do not have enough quota to refer a new member";
+        // Check the specific level quota
+        const quotaField = `level${level}_quota`;
+        if (userQuota[quotaField] <= 0) {
+          ctx.body =
+            "You do not have enough quota to refer a new member at this level";
           ctx.status = 400;
           return;
         }
@@ -285,10 +330,10 @@ export class NetworkController implements INetwork {
           type: Type.CREDIT,
         });
 
-        // Reduce the referrer's quota
-        await knex("user_quota")
-          .where({ user_id: referralPayload.id })
-          .decrement("quota", 1);
+       // Reduce the referrer's quota for the specific level
+       await knex("user_quota")
+       .where({ user_id: referralPayload.id })
+       .decrement(quotaField, 1);
 
         await this.updateWalletDetails(userDetails, hubDetails[0]?.price);
 
@@ -406,7 +451,7 @@ export class NetworkController implements INetwork {
 
   postQuotaController = async (ctx: any) => {
     try {
-      const { userId, quota } = ctx.request.body;
+      const { userId, level, quota } = ctx.request.body;
 
       // Check if user exists
       const userExists = await knex("users").where({ id: userId }).first();
@@ -417,22 +462,39 @@ export class NetworkController implements INetwork {
       }
 
       // Check if user quota exists
-      const userQuota = await knex("user_quota")
+      let userQuota = await knex("user_quota")
         .where({ user_id: userId })
         .first();
+
       if (!userQuota) {
-        // If quota doesn't exist, create a new entry with the provided quota
-        await knex("user_quota").insert({
-          id: uuidv4(),
-          user_id: userId,
-          quota: quota, // Set the quota value as provided
-        });
-      } else {
-        // If quota exists, update it with the new quota value
-        await knex("user_quota")
-          .where({ user_id: userId })
-          .update({ quota: quota });
+        // If no quota exists, insert a new entry with default quotas
+        userQuota = await knex("user_quota")
+          .insert({
+            id: uuidv4(),
+            user_id: userId,
+            level1_quota: 0,
+            level2_quota: 0,
+            level3_quota: 0,
+            level4_quota: 0,
+          })
+          .returning("*");
       }
+
+      // Determine which level's quota to update
+      const updateData: any = {};
+
+      if (level === 1) {
+        updateData.level1_quota = quota;
+      } else if (level === 2) {
+        updateData.level2_quota = quota;
+      } else if (level === 3) {
+        updateData.level3_quota = quota;
+      } else if (level === 4) {
+        updateData.level4_quota = quota;
+      }
+
+      // Update the specified level's quota
+      await knex("user_quota").where({ user_id: userId }).update(updateData);
 
       ctx.body = { message: "Quota set successfully" };
       ctx.status = 200;
@@ -448,7 +510,10 @@ export class NetworkController implements INetwork {
       // Query to get quotas with user details
       const quotas = await knex("user_quota")
         .select(
-          "user_quota.quota",
+          "user_quota.level1_quota",
+          "user_quota.level2_quota",
+          "user_quota.level3_quota",
+          "user_quota.level4_quota",
           "users.id",
           "users.shortcode",
           "users.name",
@@ -507,21 +572,20 @@ export class NetworkController implements INetwork {
   getWithdrawals = async (ctx: any) => {
     try {
       // Fetch all withdrawal records for a specific user
-      const withdrawals = await knex('withdrawals')
-        .select('id', 'amount', 'status', 'timestamp')
+      const withdrawals = await knex("withdrawals")
+        .select("id", "amount", "status", "timestamp")
         .where({ user_id: ctx.state.userPayload.id })
-        .orderBy('timestamp', 'desc');
-  
+        .orderBy("timestamp", "desc");
+
       // Send the response
       ctx.body = withdrawals;
       ctx.status = 200;
     } catch (err) {
-      console.error('Error fetching withdrawals:', err);
-      ctx.body = 'Internal Server Error';
+      console.error("Error fetching withdrawals:", err);
+      ctx.body = "Internal Server Error";
       ctx.status = 500;
     }
   };
-  
 
   updateWithDrawalRequest = async (ctx: any) => {
     try {
@@ -631,4 +695,42 @@ export class NetworkController implements INetwork {
       type: Type.CREDIT,
     });
   };
+
+  patchUserDetailsController = async (ctx: any) => {
+    try {
+        const { userId, pan_number, aadhar_number, bank_account_number, ifsc_code, upi_linkedin_number } = ctx.request.body;
+
+        // Check if user exists
+        const userExists = await knex("users").where({ id: userId }).first();
+        if (!userExists) {
+            ctx.body = "User not found";
+            ctx.status = 404;
+            return;
+        }
+
+        // Create an object to hold the fields that need updating
+        const updateData: any = {};
+        
+        if (pan_number) updateData.pan_number = pan_number;
+        if (aadhar_number) updateData.aadhar_number = aadhar_number;
+        if (bank_account_number) updateData.bank_account_number = bank_account_number;
+        if (ifsc_code) updateData.ifsc_code = ifsc_code;
+        if (upi_linkedin_number) updateData.upi_linkedin_number = upi_linkedin_number;
+
+        // If there are fields to update
+        if (Object.keys(updateData).length > 0) {
+            await knex("users").where({ id: userId }).update(updateData);
+            ctx.body = { message: "User details updated successfully" };
+            ctx.status = 200;
+        } else {
+            ctx.body = { message: "No valid fields provided for update" };
+            ctx.status = 400;
+        }
+    } catch (err: any) {
+        console.error(err);
+        ctx.body = "Internal Server Error";
+        ctx.status = 500;
+    }
+};
+
 }

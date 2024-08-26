@@ -9,6 +9,11 @@ export async function up(knex: Knex): Promise<void> {
         table.string('emailId').unique().notNullable();
         table.string('password').notNullable();
         table.string('status').notNullable();
+        table.string('pan_number').nullable()
+        table.string('aadhar_number').nullable()
+        table.string('bank_account_number').nullable()
+        table.string('ifsc_code').nullable()
+        table.string('upi_linkedin_number').nullable()
         table.timestamp('timestamp').defaultTo(knex.fn.now());
       });
 }
