@@ -686,7 +686,7 @@ export class NetworkController implements INetwork {
       });
     }
     const adminDetails = await knex("users")
-      .where({ emailId: "anudeep4n@gmail.com" })
+      .where({ emailId: "sairamlakanavarapu@gmail.com" })
       .returning("*");
     await knex("wallet_history").insert({
       id: uuidv4(),
