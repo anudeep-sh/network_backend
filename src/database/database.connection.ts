@@ -9,10 +9,10 @@ const configs: IKnexConfig = {
     client: 'postgres',
     connection: async () => {
       return {
-        host: 'localhost',
-        user: 'alakanav',
-        password: `1234`,
-        database: 'network',
+        host: '34.170.105.45',
+        user: 'networks',
+        password: `??9Eit-^8e4}J*>7`,
+        database: 'networks',
         port: 5432,
       };
     },
@@ -22,22 +22,6 @@ const configs: IKnexConfig = {
       min: 2,
       max: 20,
       propagateCreateError: false,
-    },
-  },
-
-  staging: {
-    client: 'postgresql',
-    connection: {
-      database: 'educate',
-      user: 'postgres',
-      password: '1234',
-    },
-    pool: {
-      min: 2,
-      max: 10,
-    },
-    migrations: {
-      tableName: 'chats',
     },
   },
 
