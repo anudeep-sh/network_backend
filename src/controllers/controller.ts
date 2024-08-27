@@ -368,45 +368,58 @@ export class NetworkController implements INetwork {
 
   networkController = async (ctx: any) => {
     try {
+      // Fetch users and network data
       const users = await knex("users")
-        .select("id", "name", "emailId", "shortcode")
-        .returning("*");
+        .select("id", "name", "emailId", "shortcode");
       const network = await knex("network")
-        .select("user_id", "referrer_id")
-        .returning("*");
-
+        .select("user_id", "referrer_id");
+  
+      // Map users by their ID for quick access
       const userMap = new Map();
       users.forEach((user) => {
         userMap.set(user.id, { ...user, children: [] });
       });
-
+  
+      // Build the hierarchical network structure
       network.forEach((connection) => {
         const user = userMap.get(connection.user_id);
         const referrer = userMap.get(connection.referrer_id);
-        if (referrer) {
+        // Ensure we don't add a user as their own child
+        if (referrer && referrer.id !== user.id) {
           referrer.children.push({
             ...user,
             attributes: {
-              email: user.emailId,
+              name: user.name,
               shortcode: user.shortcode,
             },
           });
         }
       });
-
+  
+      // Identify root nodes
       const rootNodes: any = [];
       userMap.forEach((user) => {
-        if (!network.some((connection) => connection.user_id === user.id)) {
-          if (user.children.length > 0) rootNodes.push(user);
+        if (
+          network.some(
+            (connection) =>
+              connection.user_id === user.id &&
+              connection.referrer_id === user.id
+          )
+        ) {
+          rootNodes.push(user);
         }
       });
-
+  
       ctx.body = { data: rootNodes };
     } catch (err: any) {
       ctx.body = "Internal Server Error";
       ctx.status = 500;
     }
   };
+  
+
+  
+  
 
   updateQuotaController = async (ctx: any) => {
     try {
@@ -686,7 +699,7 @@ export class NetworkController implements INetwork {
       });
     }
     const adminDetails = await knex("users")
-      .where({ emailId: "anudeep4n@gmail.com" })
+      .where({ emailId: "sairamlakanavarapu@gmail.com" })
       .returning("*");
     await knex("wallet_history").insert({
       id: uuidv4(),
