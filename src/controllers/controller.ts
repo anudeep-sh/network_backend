@@ -330,10 +330,10 @@ export class NetworkController implements INetwork {
           type: Type.CREDIT,
         });
 
-       // Reduce the referrer's quota for the specific level
-       await knex("user_quota")
-       .where({ user_id: referralPayload.id })
-       .decrement(quotaField, 1);
+        // Reduce the referrer's quota for the specific level
+        await knex("user_quota")
+          .where({ user_id: referralPayload.id })
+          .decrement(quotaField, 1);
 
         await this.updateWalletDetails(userDetails, hubDetails[0]?.price);
 
@@ -369,17 +369,20 @@ export class NetworkController implements INetwork {
   networkController = async (ctx: any) => {
     try {
       // Fetch users and network data
-      const users = await knex("users")
-        .select("id", "name", "emailId", "shortcode");
-      const network = await knex("network")
-        .select("user_id", "referrer_id");
-  
+      const users = await knex("users").select(
+        "id",
+        "name",
+        "emailId",
+        "shortcode"
+      );
+      const network = await knex("network").select("user_id", "referrer_id");
+
       // Map users by their ID for quick access
       const userMap = new Map();
       users.forEach((user) => {
         userMap.set(user.id, { ...user, children: [] });
       });
-  
+
       // Build the hierarchical network structure
       network.forEach((connection) => {
         const user = userMap.get(connection.user_id);
@@ -395,7 +398,7 @@ export class NetworkController implements INetwork {
           });
         }
       });
-  
+
       // Identify root nodes
       const rootNodes: any = [];
       userMap.forEach((user) => {
@@ -409,17 +412,13 @@ export class NetworkController implements INetwork {
           rootNodes.push(user);
         }
       });
-  
+
       ctx.body = { data: rootNodes };
     } catch (err: any) {
       ctx.body = "Internal Server Error";
       ctx.status = 500;
     }
   };
-  
-
-  
-  
 
   updateQuotaController = async (ctx: any) => {
     try {
@@ -640,8 +639,19 @@ export class NetworkController implements INetwork {
     try {
       const status = ctx.params.status;
       const withDrawalResponse = await knex("withdrawals")
-        .select("*")
-        .where({ status });
+        .select(
+          "withdrawals.*",
+          "users.name as user_name",
+          "users.emailId as user_email",
+          "users.shortcode as user_shortcode",
+          "users.pan_number",
+          "users.aadhar_number",
+          "users.bank_account_number",
+          "users.ifsc_code",
+          "users.upi_linkedin_number"
+        )
+        .join("users", "withdrawals.user_id", "=", "users.id")
+        .where({ "withdrawals.status": status });
       ctx.body = { data: withDrawalResponse };
       ctx.status = 200;
     } catch (err) {
@@ -711,39 +721,47 @@ export class NetworkController implements INetwork {
 
   patchUserDetailsController = async (ctx: any) => {
     try {
-        const { userId, pan_number, aadhar_number, bank_account_number, ifsc_code, upi_linkedin_number } = ctx.request.body;
+      const {
+        userId,
+        pan_number,
+        aadhar_number,
+        bank_account_number,
+        ifsc_code,
+        upi_linkedin_number,
+      } = ctx.request.body;
 
-        // Check if user exists
-        const userExists = await knex("users").where({ id: userId }).first();
-        if (!userExists) {
-            ctx.body = "User not found";
-            ctx.status = 404;
-            return;
-        }
+      // Check if user exists
+      const userExists = await knex("users").where({ id: userId }).first();
+      if (!userExists) {
+        ctx.body = "User not found";
+        ctx.status = 404;
+        return;
+      }
 
-        // Create an object to hold the fields that need updating
-        const updateData: any = {};
-        
-        if (pan_number) updateData.pan_number = pan_number;
-        if (aadhar_number) updateData.aadhar_number = aadhar_number;
-        if (bank_account_number) updateData.bank_account_number = bank_account_number;
-        if (ifsc_code) updateData.ifsc_code = ifsc_code;
-        if (upi_linkedin_number) updateData.upi_linkedin_number = upi_linkedin_number;
+      // Create an object to hold the fields that need updating
+      const updateData: any = {};
 
-        // If there are fields to update
-        if (Object.keys(updateData).length > 0) {
-            await knex("users").where({ id: userId }).update(updateData);
-            ctx.body = { message: "User details updated successfully" };
-            ctx.status = 200;
-        } else {
-            ctx.body = { message: "No valid fields provided for update" };
-            ctx.status = 400;
-        }
+      if (pan_number) updateData.pan_number = pan_number;
+      if (aadhar_number) updateData.aadhar_number = aadhar_number;
+      if (bank_account_number)
+        updateData.bank_account_number = bank_account_number;
+      if (ifsc_code) updateData.ifsc_code = ifsc_code;
+      if (upi_linkedin_number)
+        updateData.upi_linkedin_number = upi_linkedin_number;
+
+      // If there are fields to update
+      if (Object.keys(updateData).length > 0) {
+        await knex("users").where({ id: userId }).update(updateData);
+        ctx.body = { message: "User details updated successfully" };
+        ctx.status = 200;
+      } else {
+        ctx.body = { message: "No valid fields provided for update" };
+        ctx.status = 400;
+      }
     } catch (err: any) {
-        console.error(err);
-        ctx.body = "Internal Server Error";
-        ctx.status = 500;
+      console.error(err);
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
     }
-};
-
+  };
 }
