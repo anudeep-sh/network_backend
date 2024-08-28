@@ -608,8 +608,8 @@ export class NetworkController implements INetwork {
         .where({ id: withdrawalId })
         .returning("*");
       ctx.state.userPayload.id = withdrawalResponse[0]?.user_id;
-      const walletValue = await this.walletMoney(ctx);
-      console.log(walletValue,withdrawalResponse[0]?.amount)
+      const walletValue: any = await this.walletMoney(ctx);
+      console.log(walletValue,withdrawalResponse[0]?.amount,"cool")
       if (walletValue < withdrawalResponse[0]?.amount) {
         (ctx.body = "your asking more than in wallet we can not process this"),
           (ctx.status = 400);
@@ -686,7 +686,7 @@ export class NetworkController implements INetwork {
     }, 0);
     console.log(finalPrice,"finalPrice")
     const price = finalPrice || 0
-    return finalPrice;
+    return price;
   };
   updateWalletDetails = async (userDetails: any, price: number) => {
     const distribution = [
