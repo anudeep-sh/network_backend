@@ -556,7 +556,7 @@ export class NetworkController implements INetwork {
 
   withdrawalController = async (ctx: any) => {
     try {
-      const walletValue = await this.walletMoney(ctx);
+      const walletValue: any = await this.walletMoney(ctx);
       const { withdrawal_amount } = ctx.request.body;
 
       console.log(walletValue,"walletValue",withdrawal_amount,typeof withdrawal_amount)
@@ -685,6 +685,7 @@ export class NetworkController implements INetwork {
       }
     }, 0);
     console.log(finalPrice,"finalPrice")
+    const price = finalPrice || 0
     return finalPrice;
   };
   updateWalletDetails = async (userDetails: any, price: number) => {
