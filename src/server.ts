@@ -1,5 +1,5 @@
-import * as Koa from 'koa';
-import * as Router from 'koa-router';
+import Koa from 'koa';
+import Router from 'koa-router';
 import logger = require('koa-logger');
 import bodyparser = require('koa-bodyparser');
 import { NetworkController } from './controllers/controller';
@@ -36,7 +36,7 @@ app.use(cors());
 app.use(bodyparser());
 
 // Middleware to track requests
-app.use(async (ctx, next) => {
+app.use(async (ctx: any, next: any) => {
     const start = Date.now();
     await next();
     const duration = (Date.now() - start) / 1000;
@@ -48,7 +48,7 @@ app.use(async (ctx, next) => {
     httpRequestDuration.labels(ctx.method, ctx._matchedRoute || ctx.path, ctx.status.toString()).observe(duration);
 });
 
-router.get('/', async (ctx) => {
+router.get('/', async (ctx: any) => {
     ctx.body = 'Welcome to Koa';
 });
 
@@ -81,7 +81,7 @@ router.patch("/users/:userId/password", authenticate,networkController.updatePas
 router.get('/users/wallet-level', authenticate,networkController.getAllUsersWalletAndLevelController);
 
 // Expose metrics endpoint
-router.get('/metrics', async (ctx) => {
+router.get('/metrics', async (ctx: any) => {
     ctx.set('Content-Type', register.contentType);
     ctx.body = await register.metrics();
 });
