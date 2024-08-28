@@ -322,6 +322,17 @@ export class NetworkController implements INetwork {
           (ctx.body = "NOT_CORRECT_LEVEL"), (ctx.status = 400);
           return;
         }
+        const existingUser = await knex("network")
+          .select("user_id")
+          .where({ user_id: userDetails[0].id })
+          .first();
+
+        if (existingUser) {
+          // If user_id exists, throw an error
+          ctx.status=400
+          ctx.body = "User already exists in the network."
+          return
+        }
         const membershipDetails = await knex("network").insert({
           id,
           user_id: userDetails[0].id,
@@ -556,10 +567,15 @@ export class NetworkController implements INetwork {
 
   withdrawalController = async (ctx: any) => {
     try {
-      const walletValue: any = await this.walletMoney(ctx);
+      const walletValue = await this.walletMoney(ctx);
       const { withdrawal_amount } = ctx.request.body;
 
-      console.log(walletValue,"walletValue",withdrawal_amount,typeof withdrawal_amount)
+      console.log(
+        walletValue,
+        "walletValue",
+        withdrawal_amount,
+        typeof withdrawal_amount
+      );
       if (walletValue < withdrawal_amount) {
         (ctx.body = "your asking more than in wallet we can not process this"),
           (ctx.status = 400);
@@ -608,8 +624,8 @@ export class NetworkController implements INetwork {
         .where({ id: withdrawalId })
         .returning("*");
       ctx.state.userPayload.id = withdrawalResponse[0]?.user_id;
-      const walletValue: any = await this.walletMoney(ctx);
-      console.log(walletValue,withdrawalResponse[0]?.amount,"cool")
+      const walletValue = await this.walletMoney(ctx);
+      console.log(walletValue, withdrawalResponse[0]?.amount);
       if (walletValue < withdrawalResponse[0]?.amount) {
         (ctx.body = "your asking more than in wallet we can not process this"),
           (ctx.status = 400);
@@ -670,7 +686,7 @@ export class NetworkController implements INetwork {
       .where({ user_id: userDetails.id })
       .returning("*");
 
-    console.log(wallet,"wallet")
+    console.log(wallet, "wallet");
 
     if (!wallet) {
       ctx.body = "Wallet not found";
@@ -684,9 +700,8 @@ export class NetworkController implements INetwork {
         return accumulator - parseInt(curvalue.amount);
       }
     }, 0);
-    console.log(finalPrice,"finalPrice")
-    const price = finalPrice || 0
-    return price;
+    console.log(finalPrice, "finalPrice");
+    return finalPrice;
   };
   updateWalletDetails = async (userDetails: any, price: number) => {
     const distribution = [
