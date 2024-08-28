@@ -679,9 +679,9 @@ export class NetworkController implements INetwork {
     }
     const finalPrice = wallet.reduce((accumulator: number, curvalue: any) => {
       if (curvalue.type === "CREDIT") {
-        return parseInt(curvalue.amount) + accumulator;
+        return accumulator + parseInt(curvalue.amount);
       } else {
-        accumulator - parseInt(curvalue.amount);
+        return accumulator - parseInt(curvalue.amount);
       }
     }, 0);
     console.log(finalPrice,"finalPrice")
