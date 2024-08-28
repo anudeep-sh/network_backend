@@ -63,6 +63,94 @@ export class NetworkController implements INetwork {
     }
   };
 
+  updatePasswordController = async (ctx: any) => {
+    try {
+      const { userId } = ctx.params; // Get userId from URL parameters
+      const { newPassword } = ctx.request.body; // Get new password from the request body
+  
+      // Validate inputs
+      if (!userId || !newPassword) {
+        ctx.status = 400;
+        ctx.body = { message: "userId and newPassword are required." };
+        return;
+      }
+  
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+  
+      // Update the password in the database
+      const updatedRows = await knex("users")
+        .where({ id: userId })
+        .update({ password: hashedPassword })
+        .returning("*");
+  
+      if (updatedRows.length === 0) {
+        ctx.status = 404;
+        ctx.body = { message: "User not found." };
+        return;
+      }
+  
+      // Remove password from the response for security
+      updatedRows[0].password = "";
+  
+      // Respond with the updated user info
+      ctx.status = 200;
+      ctx.body = {
+        message: "Password updated successfully.",
+        user: updatedRows[0],
+      };
+    } catch (err: any) {
+      ctx.status = 500;
+      ctx.body = { message: "Internal Server Error", error: err.message };
+    }
+  };
+
+  getAllUsersWalletAndLevelController = async (ctx: any) => {
+    try {
+      // Fetch all users
+      const users = await knex('users')
+        .select('id', 'name', 'emailId');
+  
+      if (users.length === 0) {
+        ctx.status = 404;
+        ctx.body = { message: 'No users found' };
+        return;
+      }
+  
+      // Fetch wallet history and level for each user
+      const userDetailsWithWalletAndLevel = await Promise.all(users.map(async (user) => {
+        // Fetch wallet history for each user
+        const walletHistory = await knex('wallet_history')
+          .select('id', 'amount', 'type', 'timestamp')
+          .where({ user_id: user.id });
+  
+        // Fetch the level from the network and hub tables
+        const userNetwork = await knex('network')
+          .select('hub.level', 'hub.name')
+          .join('hub', 'network.hub_id', '=', 'hub.id')
+          .where({ 'network.user_id': user.id })
+          .first();
+  
+        return {
+          user,
+          walletHistory,
+          level: userNetwork ? userNetwork.level : null,
+          hubName: userNetwork ? userNetwork.name : null,
+        };
+      }));
+  
+      // Construct the response
+      ctx.body = {
+        users: userDetailsWithWalletAndLevel,
+      };
+      ctx.status = 200;
+    } catch (error) {
+      console.error('Error fetching users wallet and level:', error);
+      ctx.status = 500;
+      ctx.body = { message: 'Internal Server Error' };
+    }
+  };
+
   loginController = async (ctx: any) => {
     try {
       const { email, password } = ctx.request.body;
