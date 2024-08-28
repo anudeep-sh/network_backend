@@ -558,6 +558,8 @@ export class NetworkController implements INetwork {
     try {
       const walletValue = await this.walletMoney(ctx);
       const { withdrawal_amount } = ctx.request.body;
+
+      console.log(walletValue,"walletValue",withdrawal_amount,typeof withdrawal_amount)
       if (walletValue < withdrawal_amount) {
         (ctx.body = "your asking more than in wallet we can not process this"),
           (ctx.status = 400);
@@ -607,7 +609,7 @@ export class NetworkController implements INetwork {
         .returning("*");
       ctx.state.userPayload.id = withdrawalResponse[0]?.user_id;
       const walletValue = await this.walletMoney(ctx);
-
+      console.log(walletValue,withdrawalResponse[0]?.amount)
       if (walletValue < withdrawalResponse[0]?.amount) {
         (ctx.body = "your asking more than in wallet we can not process this"),
           (ctx.status = 400);
@@ -668,6 +670,8 @@ export class NetworkController implements INetwork {
       .where({ user_id: userDetails.id })
       .returning("*");
 
+    console.log(wallet,"wallet")
+
     if (!wallet) {
       ctx.body = "Wallet not found";
       ctx.status = 404;
@@ -680,6 +684,7 @@ export class NetworkController implements INetwork {
         accumulator - parseInt(curvalue.amount);
       }
     }, 0);
+    console.log(finalPrice,"finalPrice")
     return finalPrice;
   };
   updateWalletDetails = async (userDetails: any, price: number) => {
