@@ -3,7 +3,7 @@ import Router from 'koa-router';
 import logger = require('koa-logger');
 import bodyparser = require('koa-bodyparser');
 import { NetworkController } from './controllers/controller';
-import { authenticate } from './middleware/middleware';
+import { adminAuthenticate, authenticate } from './middleware/middleware';
 import cors = require('@koa/cors');
 import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client'; // Import prom-client
 
@@ -68,17 +68,18 @@ router.post('/withdrawal', authenticate, networkController.withdrawalController)
 router.get('/withdrawal', authenticate, networkController.getWithdrawals);
 
 // Admin routes
-router.patch('/update-withdrawal-request', authenticate, networkController.updateWithDrawalRequest);
+router.patch('/update-withdrawal-request', adminAuthenticate, networkController.updateWithDrawalRequest);
 router.get('/withdrawals-list/:status', authenticate, networkController.withdrawalList);
 router.patch('/update-quota', authenticate, networkController.updateQuotaController);
-router.post('/post-quota', authenticate, networkController.postQuotaController);
+router.post('/post-quota', adminAuthenticate, networkController.postQuotaController);
 
 
 router.get('/api/network', authenticate, networkController.networkController);
 router.get('/get-quotas', authenticate, networkController.getQuotasController);
 router.get('/get-quota/:userId', authenticate, networkController.getQuotaByUserIdController);
-router.patch("/users/:userId/password", authenticate,networkController.updatePasswordController);
-router.get('/users/wallet-level', authenticate,networkController.getAllUsersWalletAndLevelController);
+router.patch("/users/:userId/password", adminAuthenticate,networkController.updatePasswordController);
+router.get('/users/wallet-level', adminAuthenticate,networkController.getAllUsersWalletAndLevelController);
+router.get('/v1/users-details-by-id',authenticate,networkController.userDetailsById)
 
 // Expose metrics endpoint
 router.get('/metrics', async (ctx: any) => {
