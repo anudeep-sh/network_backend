@@ -678,7 +678,7 @@ export class NetworkController implements INetwork {
 
   withdrawalController = async (ctx: any) => {
     try {
-      const walletValue = await this.walletMoney(ctx);
+      const walletValue: any = await this.walletMoney(ctx);
       const { withdrawal_amount } = ctx.request.body;
 
       console.log(
@@ -735,7 +735,7 @@ export class NetworkController implements INetwork {
         .where({ id: withdrawalId })
         .returning("*");
       ctx.state.userPayload.id = withdrawalResponse[0]?.user_id;
-      const walletValue = await this.walletMoney(ctx);
+      const walletValue: any = await this.walletMoney(ctx);
       console.log(walletValue, withdrawalResponse[0]?.amount);
       if (walletValue < withdrawalResponse[0]?.amount) {
         (ctx.body = "your asking more than in wallet we can not process this"),
