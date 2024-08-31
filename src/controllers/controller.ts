@@ -816,10 +816,10 @@ export class NetworkController implements INetwork {
   };
   updateWalletDetails = async (userDetails: any, price: number) => {
     const distribution = [
-      { level: 1, percentage: 25 },
-      { level: 2, percentage: 10 },
+      { level: 1, percentage: 16 },
+      { level: 2, percentage: 8 },
       { level: 3, percentage: 5 },
-      { level: 4, percentage: 2.5 },
+      { level: 4, percentage: 3 },
     ];
     let finallyCompanywallet = price;
     let userDetailId = userDetails[0].id;
