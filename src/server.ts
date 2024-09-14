@@ -77,7 +77,7 @@ router.post('/post-quota', adminAuthenticate, networkController.postQuotaControl
 router.get('/api/network', authenticate, networkController.networkController);
 router.get('/get-quotas', authenticate, networkController.getQuotasController);
 router.get('/get-quota/:userId', authenticate, networkController.getQuotaByUserIdController);
-router.patch("/users/:userId/password", adminAuthenticate,networkController.updatePasswordController);
+router.patch("/users/:userId/password", authenticate,networkController.updatePasswordController);
 router.get('/users/wallet-level', adminAuthenticate,networkController.getAllUsersWalletAndLevelController);
 router.get('/v1/users-details-by-id',authenticate,networkController.userDetailsById)
 
