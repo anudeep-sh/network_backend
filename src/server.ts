@@ -81,6 +81,8 @@ router.patch("/users/:userId/password", authenticate,networkController.updatePas
 router.get('/users/wallet-level', adminAuthenticate,networkController.getAllUsersWalletAndLevelController);
 router.get('/v1/users-details-by-id',authenticate,networkController.userDetailsById)
 
+router.patch('/v1/update-wallet-details',adminAuthenticate,networkController.updateWalletDetailsAsPerUserId)
+
 // Expose metrics endpoint
 router.get('/metrics', async (ctx: any) => {
     ctx.set('Content-Type', register.contentType);

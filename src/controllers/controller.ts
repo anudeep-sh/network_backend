@@ -811,6 +811,7 @@ export class NetworkController implements INetwork {
         return accumulator - parseInt(curvalue.amount);
       }
     }, 0);
+
     console.log(finalPrice, "finalPrice");
     return finalPrice;
   };
@@ -896,4 +897,32 @@ export class NetworkController implements INetwork {
       ctx.status = 500;
     }
   };
+
+  updateWalletDetailsAsPerUserId = async (ctx: any) => {
+    try {
+      const { user_id, amount } = ctx.request.body;
+      if(!amount || typeof amount!=='number'){
+        ctx.body="invalid amount",
+        ctx.status=400
+        return
+      }
+      // Check if user exists
+      const userExists = await knex("users").where({ id: user_id }).first();
+      if (!userExists) {
+        ctx.body = "User not found";
+        ctx.status = 404;
+        return;
+      }
+      const wallet = await knex("wallet_history")
+        .insert({ id: uuidv4(), user_id, amount, type: Type.CREDIT })
+        .returning("*");
+      ctx.body="wallet updated",
+      ctx.status=200
+    } catch (err) {
+      ctx.body = "Wallet Update Failed";
+      ctx.status = 500;
+    }
+  };
 }
+
+// password change
