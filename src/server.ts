@@ -83,6 +83,10 @@ router.get('/v1/users-details-by-id',authenticate,networkController.userDetailsB
 
 router.patch('/v1/update-wallet-details',adminAuthenticate,networkController.updateWalletDetailsAsPerUserId)
 
+router.post('/store-retailer-data',authenticate,networkController.storeRetailerDataAPI)
+router.patch('/premium-deduction-api',authenticate,networkController.premiumDeductionAPI)
+router.patch('/policy-confirmation-api',authenticate,networkController.policyConfirmationAPI)
+
 // Expose metrics endpoint
 router.get('/metrics', async (ctx: any) => {
     ctx.set('Content-Type', register.contentType);
