@@ -981,9 +981,17 @@ export class NetworkController implements INetwork {
         ctx.body = { message: "Invalid authorization key." };
         return;
       }
+      const userDetails = await knex("users")
+          .where({ shortcode: urc })
+          .returning("*");
+        if (userDetails.length == 0) {
+          (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
+            (ctx.status = 400);
+          return;
+        }
       // Fetch wallet balance for the retailer
       const wallet = await knex("wallet_history")
-        .where({ user_id: ctx.state.userPayload.id })
+        .where({ user_id: userDetails[0].id })
         .select("amount", "type");
 
       const walletBalance = wallet.reduce(
@@ -1008,7 +1016,7 @@ export class NetworkController implements INetwork {
       // Deduct premium amount
       await knex("wallet_history").insert({
         id: uuidv4(),
-        user_id: ctx.state.userPayload.id,
+        user_id: userDetails[0].id,
         amount: pamt,
         type: "WITHDRAWAL",
         // timestamp: reqtime,
