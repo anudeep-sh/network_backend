@@ -934,16 +934,17 @@ export class NetworkController implements INetwork {
         return;
       }
       // Check if user exists
-      const userExists = await knex("users").where({ id: urc }).first();
+      const userExists = await knex("users").where({ shortcode: urc }).first();
       if (!userExists) {
         ctx.body = "User not found";
         ctx.status = 404;
         return;
       }
-
+      const id = uuidv4();
       // Insert retailer data into `gibiluser`
       await knex("gibiluser").insert({
         id: uuidv4(),
+        refno: id,
         urc,
         umc,
         ak,
@@ -967,7 +968,7 @@ export class NetworkController implements INetwork {
 
   premiumDeductionAPI = async (ctx: any) => {
     try {
-      const { refno, ak, urc, umc, ptype, pamt, reqtime } = ctx.request.body; 
+      const { refno, ak, urc, umc, ptype, pamt, reqtime } = ctx.request.body;
       // Validate input parameters
       if (!refno || !ak || !urc || !umc || !ptype || !pamt || !reqtime) {
         ctx.status = 400;
@@ -975,51 +976,70 @@ export class NetworkController implements INetwork {
         return;
       }
       // Verify `ak` matches the unique authorization key from environment
-      if (ak !== process.env.UNIQUE_AUTHORIZATION_CODE) {
+      if (ak !== 'kdjfowfjoew424i2ej4') {
         ctx.status = 403;
         ctx.body = { message: "Invalid authorization key." };
         return;
-      } 
+      }
       // Fetch wallet balance for the retailer
       const wallet = await knex("wallet_history")
-        .where({ user_id: urc })
+        .where({ user_id: ctx.state.userPayload.id })
         .select("amount", "type");
-  
-      const walletBalance = wallet.reduce((accumulator: number, record: any) => {
-        if (record.type === "CREDIT") return accumulator + parseFloat(record.amount);
-        return accumulator - parseFloat(record.amount);
-      }, 0);  
+
+      const walletBalance = wallet.reduce(
+        (accumulator: number, record: any) => {
+          if (record.type === "CREDIT")
+            return accumulator + parseFloat(record.amount);
+          return accumulator - parseFloat(record.amount);
+        },
+        0
+      );
       if (walletBalance < pamt) {
         ctx.status = 400;
-        ctx.body = { refno, status: 1003, message: "FAIL", resptime: new Date().toISOString() };
+        ctx.body = {
+          refno,
+          status: 1003,
+          message: "FAIL",
+          resptime: new Date().toISOString(),
+        };
         return;
-      }  
+      }
+
       // Deduct premium amount
       await knex("wallet_history").insert({
         id: uuidv4(),
-        user_id: urc,
+        user_id: ctx.state.userPayload.id,
         amount: pamt,
-        type: "DEBIT",
-        timestamp: reqtime,
-      });  
+        type: "WITHDRAWAL",
+        // timestamp: reqtime,
+      });
       // Update gibiluser with transaction details
-      await knex("gibiluser")
-        .where({ urc })
-        .update({
-          pampt: pamt,
-          pstatus: "DEBITED",
-          ptype,
-          reqtime,
-        });
+      await knex("gibiluser").where({ urc }).update({
+        refno,
+        pampt: pamt,
+        pstatus: "DEBITED",
+        ptype,
+        // reqtime,
+      });
       ctx.status = 200;
-      ctx.body = { refno, status: 1001, message: "SUCCESS", resptime: new Date().toISOString() };
+      ctx.body = {
+        refno,
+        status: 1001,
+        message: "SUCCESS",
+        resptime: new Date().toISOString(),
+      };
     } catch (err) {
       console.error(err);
       ctx.status = 500;
-      ctx.body = { refno: ctx.request.body.refno, status: 1003, message: "FAIL", resptime: new Date().toISOString() };
+      ctx.body = {
+        refno: ctx.request.body.refno,
+        status: 1003,
+        message: "FAIL",
+        resptime: new Date().toISOString(),
+      };
     }
   };
-   policyConfirmationAPI = async (ctx: any) => {
+  policyConfirmationAPI = async (ctx: any) => {
     try {
       const {
         refno,
@@ -1034,7 +1054,7 @@ export class NetworkController implements INetwork {
         distributor_payout,
         reqtime,
       } = ctx.request.body;
-  
+
       // Validate input parameters
       if (
         !refno ||
@@ -1053,49 +1073,58 @@ export class NetworkController implements INetwork {
         ctx.body = { message: "Missing required parameters." };
         return;
       }
-  
+
       // Verify `ak` matches the unique authorization key from environment
-      if (ak !== process.env.UNIQUE_AUTHORIZATION_CODE) {
+      if (ak !== 'kdjfowfjoew424i2ej4') {
         ctx.status = 403;
         ctx.body = { message: "Invalid authorization key." };
         return;
       }
-  
+
       // Handle confirmation or reversal based on `pstatus`
       if (pstatus === 1) {
         // Update gibiluser for confirmed policy
-        await knex("gibiluser")
-          .where({ urc })
-          .update({
-            pampt: pamt,
-            pstatus: "CONFIRMED",
-            ptype,
-            payout,
-            retailer_payout,
-            distributor_payout,
-            reqtime,
-          });
-  
+        await knex("gibiluser").where({ urc }).update({
+          pampt: pamt,
+          pstatus: "CONFIRMED",
+          ptype,
+          payout,
+          retailer_payout,
+          distributor_payout,
+        });
+
         ctx.status = 200;
-        ctx.body = { status: 1001, refno, message: "SUCCESS", resptime: new Date().toISOString() };
+        ctx.body = {
+          status: 1001,
+          refno,
+          message: "SUCCESS",
+          resptime: new Date().toISOString(),
+        };
       } else {
         // Update gibiluser for reversal
-        await knex("gibiluser")
-          .where({ urc })
-          .update({
-            pampt: pamt,
-            pstatus: "REVERSED",
-            ptype,
-            reqtime,
-          });
-  
+        await knex("gibiluser").where({ urc }).update({
+          pampt: pamt,
+          pstatus: "REVERSED",
+          ptype,
+        });
+
         ctx.status = 200;
-        ctx.body = { status: 1001, refno, message: "REVERSAL_SUCCESS", resptime: new Date().toISOString() };
+        ctx.body = {
+          status: 1001,
+          refno,
+          message: "REVERSAL_SUCCESS",
+          resptime: new Date().toISOString(),
+        };
       }
     } catch (err) {
       console.error(err);
       ctx.status = 500;
-      ctx.body = { status: 1003, refno: ctx.request.body.refno, message: "FAIL", resptime: new Date().toISOString() };
+      ctx.body = {
+        status: 1003,
+        refno: ctx.request.body.refno,
+        message: "FAIL",
+        resptime: new Date().toISOString(),
+      };
     }
-  }; 
+  };
 }
