@@ -27,7 +27,7 @@ export const authenticate = async (ctx: any, next: any) => {
 };
 
 export const gibilauthenticate = async (ctx: any, next: any) => {
-  const token = ctx.headers?.UserToken?.split(' ')[1];
+  const token = ctx.headers?.usertoken?.split(' ')[1];
 
   if (!token) {
     ctx.body = "Authentication token is required";
