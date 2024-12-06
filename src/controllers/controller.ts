@@ -268,13 +268,24 @@ export class NetworkController implements INetwork {
         username === "anudeep4n@gmail.com" ||
         username === "sairamlakanavarapu@gmail.com"
       ) {
-        ctx.body = { user, UserToken: token, hubDetails, role: "ADMIN" };
+        ctx.body = { user, UserToken: token, hubDetails, role: "ADMIN", HasError: false, };
       } else {
-        ctx.body = { user, UserToken: token, hubDetails, role: "USER" };
+        ctx.body = { user, UserToken: token, hubDetails, role: "USER", HasError: false, };
       }
     } catch (err: any) {
       console.error(err);
-      ctx.body = "Internal Server Error";
+      ctx.body = {
+        "UserToken": null,
+        "DisplayName": null,
+        "HasError": true,
+        "Errors": [
+          {
+            "ErrorCode": 3999,
+            "ErrorMessage": "Please Provide Correct Password.",
+            "HasError": true
+          }
+        ]
+      }
       ctx.status = 500;
     }
   };
@@ -1038,13 +1049,13 @@ export class NetworkController implements INetwork {
       //   return;
       // }
       const userDetails = await knex("users")
-          .where({ shortcode: urc })
-          .returning("*");
-        if (userDetails.length == 0) {
-          (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
-            (ctx.status = 400);
-          return;
-        }
+        .where({ shortcode: urc })
+        .returning("*");
+      if (userDetails.length == 0) {
+        (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
+          (ctx.status = 400);
+        return;
+      }
       // Fetch wallet balance for the retailer
       const wallet = await knex("wallet_history")
         .where({ user_id: userDetails[0].id })
@@ -1138,13 +1149,13 @@ export class NetworkController implements INetwork {
         return;
       }
       const userDetails = await knex("users")
-          .where({ shortcode: urc })
-          .returning("*");
-        if (userDetails.length == 0) {
-          (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
-            (ctx.status = 400);
-          return;
-        }
+        .where({ shortcode: urc })
+        .returning("*");
+      if (userDetails.length == 0) {
+        (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
+          (ctx.status = 400);
+        return;
+      }
 
       // Verify `ak` matches the unique authorization key from environment
       // if (ak !== 'kdjfowfjoew424i2ej4') {
