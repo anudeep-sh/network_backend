@@ -3,7 +3,7 @@ import Router from 'koa-router';
 import logger = require('koa-logger');
 import bodyparser = require('koa-bodyparser');
 import { NetworkController } from './controllers/controller';
-import { adminAuthenticate, authenticate } from './middleware/middleware';
+import { adminAuthenticate, authenticate, gibilauthenticate } from './middleware/middleware';
 import cors = require('@koa/cors');
 import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client'; // Import prom-client
 
@@ -56,6 +56,7 @@ const networkController = new NetworkController();
 
 router.post('/register', networkController.registerController);
 router.post('/login', networkController.loginController);
+router.post('/gibil-login', networkController.gibilloginController);
 router.patch('/update-bank-details',authenticate,networkController.patchUserDetailsController);
 
 
@@ -84,8 +85,8 @@ router.get('/v1/users-details-by-id',authenticate,networkController.userDetailsB
 router.patch('/v1/update-wallet-details',adminAuthenticate,networkController.updateWalletDetailsAsPerUserId)
 
 router.post('/store-retailer-data',authenticate,networkController.storeRetailerDataAPI)
-router.patch('/premium-deduction-api',authenticate,networkController.premiumDeductionAPI)
-router.patch('/policy-confirmation-api',authenticate,networkController.policyConfirmationAPI)
+router.patch('/premium-deduction-api',gibilauthenticate,networkController.premiumDeductionAPI)
+router.patch('/policy-confirmation-api',gibilauthenticate,networkController.policyConfirmationAPI)
 
 // Expose metrics endpoint
 router.get('/metrics', async (ctx: any) => {

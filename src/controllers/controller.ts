@@ -223,6 +223,60 @@ export class NetworkController implements INetwork {
     }
   };
 
+  gibilloginController = async (ctx: any) => {
+    try {
+      const { username, password } = ctx.request.body;
+
+      const user = await knex("users")
+        .where({ emailId: username.toLowerCase() })
+        .returning("*");
+      if (user.length == 0) {
+        ctx.body = "Invalid email or password";
+        ctx.status = 401;
+        return;
+      }
+
+      if (!(await bcrypt.compare(password, user[0].password))) {
+        ctx.body = "Invalid email or password";
+        ctx.status = 401;
+        return;
+      }
+      user[0].password = "";
+      let hubDetails: any;
+
+      try {
+        const networkEntry = await knex("network")
+          .where({ user_id: user[0].id })
+          .first();
+
+        if (networkEntry && networkEntry.hub_id) {
+          hubDetails = await knex("hub")
+            .where({ id: networkEntry.hub_id })
+            .first();
+        }
+      } catch (err) {
+        console.log(err);
+      }
+
+      // Generate JWT token
+      const token = jwt.sign({ userPayload: user[0] }, "SAI_RAM", {
+        expiresIn: "24h", // Set the token expiration time
+      });
+      if (
+        username === "anudeep4n@gmail.com" ||
+        username === "sairamlakanavarapu@gmail.com"
+      ) {
+        ctx.body = { user, UserToken: token, hubDetails, role: "ADMIN" };
+      } else {
+        ctx.body = { user, UserToken: token, hubDetails, role: "USER" };
+      }
+    } catch (err: any) {
+      console.error(err);
+      ctx.body = "Internal Server Error";
+      ctx.status = 500;
+    }
+  };
+
   getQuotaByUserIdController = async (ctx: any) => {
     try {
       const { userId } = ctx.params;
@@ -941,8 +995,8 @@ export class NetworkController implements INetwork {
         return;
       }
       const id = uuidv4();
-      // Insert retailer data into `gibiluser`
-      await knex("gibiluser").insert({
+      // Insert retailer data into `gibilusers`
+      await knex("gibilusers").insert({
         id: uuidv4(),
         refno: id,
         urc,
@@ -975,12 +1029,12 @@ export class NetworkController implements INetwork {
         ctx.body = { message: "Missing required parameters." };
         return;
       }
-      // Verify `ak` matches the unique authorization key from environment
-      if (ak !== 'kdjfowfjoew424i2ej4') {
-        ctx.status = 403;
-        ctx.body = { message: "Invalid authorization key." };
-        return;
-      }
+      // // Verify `ak` matches the unique authorization key from environment
+      // if (ak !== 'kdjfowfjoew424i2ej4') {
+      //   ctx.status = 403;
+      //   ctx.body = { message: "Invalid authorization key." };
+      //   return;
+      // }
       const userDetails = await knex("users")
           .where({ shortcode: urc })
           .returning("*");
@@ -1021,8 +1075,8 @@ export class NetworkController implements INetwork {
         type: "WITHDRAWAL",
         // timestamp: reqtime,
       });
-      // Update gibiluser with transaction details
-      await knex("gibiluser").where({ urc }).update({
+      // Update gibilusers with transaction details
+      await knex("gibilusers").where({ ak }).update({
         refno,
         pampt: pamt,
         pstatus: "DEBITED",
@@ -1081,18 +1135,26 @@ export class NetworkController implements INetwork {
         ctx.body = { message: "Missing required parameters." };
         return;
       }
+      const userDetails = await knex("users")
+          .where({ shortcode: urc })
+          .returning("*");
+        if (userDetails.length == 0) {
+          (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
+            (ctx.status = 400);
+          return;
+        }
 
       // Verify `ak` matches the unique authorization key from environment
-      if (ak !== 'kdjfowfjoew424i2ej4') {
-        ctx.status = 403;
-        ctx.body = { message: "Invalid authorization key." };
-        return;
-      }
+      // if (ak !== 'kdjfowfjoew424i2ej4') {
+      //   ctx.status = 403;
+      //   ctx.body = { message: "Invalid authorization key." };
+      //   return;
+      // }
 
       // Handle confirmation or reversal based on `pstatus`
       if (pstatus === 1) {
-        // Update gibiluser for confirmed policy
-        await knex("gibiluser").where({ urc }).update({
+        // Update gibilusers for confirmed policy
+        await knex("gibilusers").where({ ak }).update({
           pampt: pamt,
           pstatus: "CONFIRMED",
           ptype,
@@ -1109,8 +1171,15 @@ export class NetworkController implements INetwork {
           resptime: new Date().toISOString(),
         };
       } else {
-        // Update gibiluser for reversal
-        await knex("gibiluser").where({ urc }).update({
+        // Update gibilusers for reversal
+        await knex("wallet_history").insert({
+          id: uuidv4(),
+          user_id: userDetails[0].id,
+          amount: pamt,
+          type: "CREDIT",
+          // timestamp: reqtime,
+        });
+        await knex("gibilusers").where({ ak }).update({
           pampt: pamt,
           pstatus: "REVERSED",
           ptype,
