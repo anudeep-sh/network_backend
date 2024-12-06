@@ -1137,11 +1137,8 @@ export class NetworkController implements INetwork {
         !urc ||
         !umc ||
         !pamt ||
-        pstatus === undefined ||
         !ptype ||
         !payout ||
-        !retailer_payout ||
-        !distributor_payout ||
         !reqtime
       ) {
         ctx.status = 400;
