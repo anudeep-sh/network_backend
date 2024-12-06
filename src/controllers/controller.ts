@@ -225,7 +225,9 @@ export class NetworkController implements INetwork {
 
   gibilloginController = async (ctx: any) => {
     try {
-      const { username, password } = ctx.request.body;
+      const { Username, Password } = ctx.request.body;
+      const username = Username
+      const password = Password
 
       const user = await knex("users")
         .where({ emailId: username.toLowerCase() })
