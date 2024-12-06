@@ -85,8 +85,8 @@ router.get('/v1/users-details-by-id',authenticate,networkController.userDetailsB
 router.patch('/v1/update-wallet-details',adminAuthenticate,networkController.updateWalletDetailsAsPerUserId)
 
 router.post('/store-retailer-data',authenticate,networkController.storeRetailerDataAPI)
-router.patch('/premium-deduction-api',gibilauthenticate,networkController.premiumDeductionAPI)
-router.patch('/policy-confirmation-api',gibilauthenticate,networkController.policyConfirmationAPI)
+router.post('/premium-deduction-api',gibilauthenticate,networkController.premiumDeductionAPI)
+router.post('/policy-confirmation-api',gibilauthenticate,networkController.policyConfirmationAPI)
 
 // Expose metrics endpoint
 router.get('/metrics', async (ctx: any) => {
