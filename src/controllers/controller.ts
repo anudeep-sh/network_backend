@@ -1162,7 +1162,7 @@ export class NetworkController implements INetwork {
       // }
 
       // Handle confirmation or reversal based on `pstatus`
-      if (pstatus === 1) {
+      if (pstatus === 1 || pstatus === '1') {
         // Update gibilusers for confirmed policy
         await knex("gibilusers").where({ ak }).update({
           pampt: pamt,
