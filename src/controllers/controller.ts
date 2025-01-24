@@ -125,7 +125,7 @@ export class NetworkController implements INetwork {
   getAllUsersWalletAndLevelController = async (ctx: any) => {
     try {
       // Fetch all users
-      const users = await knex("users").select("id", "name", "emailId");
+      const users = await knex("users").select("id", "name", "emailId","shortcode","status","pan_number","aadhar_number","bank_account_number","ifsc_code","upi_linkedin_number");
 
       if (users.length === 0) {
         ctx.status = 404;
