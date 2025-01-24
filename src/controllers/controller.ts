@@ -708,24 +708,30 @@ export class NetworkController implements INetwork {
 
   getQuotasController = async (ctx: any) => {
     try {
-      // Query to get quotas with user details
-      const quotas = await knex("user_quota")
-        .select(
-          "user_quota.level1_quota",
-          "user_quota.level2_quota",
-          "user_quota.level3_quota",
-          "user_quota.level4_quota",
-          "users.id",
-          "users.shortcode",
-          "users.name",
-          "users.emailId",
-          "users.status",
-          "users.timestamp"
-        )
-        .leftJoin("users", "user_quota.user_id", "users.id");
+     // Query to get quotas with user details
+    // Query to get quotas with user details
+    const quotas = await knex("user_quota")
+      .select(
+        "user_quota.level1_quota",
+        "user_quota.level2_quota",
+        "user_quota.level3_quota",
+        "user_quota.level4_quota",
+        "users.id as user_id",
+        "users.shortcode",
+        "users.name",
+        "users.emailId",
+        "users.status",
+        "users.timestamp",
+        "referrer.id as referrer_id",
+        "referrer.name as referrer_name",
+        "referrer.emailId as referrer_email"
+      )
+      .leftJoin("users", "user_quota.user_id", "users.id")
+      .leftJoin("network", "users.id", "network.user_id")
+      .leftJoin("users as referrer", "network.referrer_id", "referrer.id");
 
-      ctx.body = { quotas };
-      ctx.status = 200;
+    ctx.body = { quotas };
+    ctx.status = 200;
     } catch (err: any) {
       console.error(err);
       ctx.body = "Internal Server Error";
