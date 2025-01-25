@@ -724,7 +724,8 @@ export class NetworkController implements INetwork {
         "users.timestamp",
         "referrer.id as referrer_id",
         "referrer.name as referrer_name",
-        "referrer.emailId as referrer_email"
+        "referrer.emailId as referrer_email",
+        "referrer.shortcode as referrer_shortcode"
       )
       .leftJoin("users", "user_quota.user_id", "users.id")
       .leftJoin("network", "users.id", "network.user_id")
