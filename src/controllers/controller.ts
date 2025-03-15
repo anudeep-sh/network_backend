@@ -125,7 +125,18 @@ export class NetworkController implements INetwork {
   getAllUsersWalletAndLevelController = async (ctx: any) => {
     try {
       // Fetch all users
-      const users = await knex("users").select("id", "name", "emailId","shortcode","status","pan_number","aadhar_number","bank_account_number","ifsc_code","upi_linkedin_number");
+      const users = await knex("users").select(
+        "id",
+        "name",
+        "emailId",
+        "shortcode",
+        "status",
+        "pan_number",
+        "aadhar_number",
+        "bank_account_number",
+        "ifsc_code",
+        "upi_linkedin_number"
+      );
 
       if (users.length === 0) {
         ctx.status = 404;
@@ -226,8 +237,8 @@ export class NetworkController implements INetwork {
   gibilloginController = async (ctx: any) => {
     try {
       const { Username, Password } = ctx.request.body;
-      const username = Username
-      const password = Password
+      const username = Username;
+      const password = Password;
 
       const user = await knex("users")
         .where({ emailId: username.toLowerCase() })
@@ -268,24 +279,36 @@ export class NetworkController implements INetwork {
         username === "anudeep4n@gmail.com" ||
         username === "sairamlakanavarapu@gmail.com"
       ) {
-        ctx.body = { user, UserToken: token, hubDetails, role: "ADMIN", HasError: false, };
+        ctx.body = {
+          user,
+          UserToken: token,
+          hubDetails,
+          role: "ADMIN",
+          HasError: false,
+        };
       } else {
-        ctx.body = { user, UserToken: token, hubDetails, role: "USER", HasError: false, };
+        ctx.body = {
+          user,
+          UserToken: token,
+          hubDetails,
+          role: "USER",
+          HasError: false,
+        };
       }
     } catch (err: any) {
       console.error(err);
       ctx.body = {
-        "UserToken": null,
-        "DisplayName": null,
-        "HasError": true,
-        "Errors": [
+        UserToken: null,
+        DisplayName: null,
+        HasError: true,
+        Errors: [
           {
-            "ErrorCode": 3999,
-            "ErrorMessage": "Please Provide Correct Password.",
-            "HasError": true
-          }
-        ]
-      }
+            ErrorCode: 3999,
+            ErrorMessage: "Please Provide Correct Password.",
+            HasError: true,
+          },
+        ],
+      };
       ctx.status = 500;
     }
   };
@@ -613,7 +636,14 @@ export class NetworkController implements INetwork {
 
   updateQuotaController = async (ctx: any) => {
     try {
-      const { userId, amount } = ctx.request.body;
+      const { userId, amount, level } = ctx.request.body;
+
+      // Validate level is between 1-4
+      if (!level || level < 1 || level > 5) {
+        ctx.body = "Invalid level. Must be between 1 and 5";
+        ctx.status = 400;
+        return;
+      }
 
       // Check if user exists
       const userExists = await knex("users").where({ id: userId }).first();
@@ -623,27 +653,37 @@ export class NetworkController implements INetwork {
         return;
       }
 
+      const quotaColumn = `level${level}_quota`; // Dynamically create column name
+
       // Check if user quota exists
       const userQuota = await knex("user_quota")
         .where({ user_id: userId })
         .first();
+
       if (!userQuota) {
         // If quota doesn't exist, create a new entry with the provided amount
-        await knex("user_quota").insert({
+        const newQuota = {
           id: uuidv4(),
           user_id: userId,
-          quota: amount,
-        });
+          level1_quota: 0,
+          level2_quota: 0,
+          level3_quota: 0,
+          level4_quota: 0,
+          level5_quota: 0,
+          [quotaColumn]: amount, // Set the specific level quota
+        };
+        await knex("user_quota").insert(newQuota);
       } else {
-        // If quota exists, update it with the provided amount (increment or decrement)
+        // If quota exists, update the specific level quota
         await knex("user_quota")
           .where({ user_id: userId })
           .update({
-            quota: knex.raw("?? + ?", ["quota", amount]), // Adjusts quota based on the amount
+            [quotaColumn]: knex.raw("?? + ?", [quotaColumn, amount]),
+            updated_at: knex.fn.now(),
           });
       }
 
-      ctx.body = { message: "Quota updated successfully" };
+      ctx.body = { message: `Level ${level} quota updated successfully` };
       ctx.status = 200;
     } catch (err: any) {
       console.error(err);
@@ -713,32 +753,32 @@ export class NetworkController implements INetwork {
 
   getQuotasController = async (ctx: any) => {
     try {
-     // Query to get quotas with user details
-    // Query to get quotas with user details
-    const quotas = await knex("user_quota")
-      .select(
-        "user_quota.level1_quota",
-        "user_quota.level2_quota",
-        "user_quota.level3_quota",
-        "user_quota.level4_quota",
-        "user_quota.level5_quota",
-        "users.id as user_id",
-        "users.shortcode",
-        "users.name",
-        "users.emailId",
-        "users.status",
-        "users.timestamp",
-        "referrer.id as referrer_id",
-        "referrer.name as referrer_name",
-        "referrer.emailId as referrer_email",
-        "referrer.shortcode as referrer_shortcode"
-      )
-      .leftJoin("users", "user_quota.user_id", "users.id")
-      .leftJoin("network", "users.id", "network.user_id")
-      .leftJoin("users as referrer", "network.referrer_id", "referrer.id");
+      // Query to get quotas with user details
+      // Query to get quotas with user details
+      const quotas = await knex("user_quota")
+        .select(
+          "user_quota.level1_quota",
+          "user_quota.level2_quota",
+          "user_quota.level3_quota",
+          "user_quota.level4_quota",
+          "user_quota.level5_quota",
+          "users.id as user_id",
+          "users.shortcode",
+          "users.name",
+          "users.emailId",
+          "users.status",
+          "users.timestamp",
+          "referrer.id as referrer_id",
+          "referrer.name as referrer_name",
+          "referrer.emailId as referrer_email",
+          "referrer.shortcode as referrer_shortcode"
+        )
+        .leftJoin("users", "user_quota.user_id", "users.id")
+        .leftJoin("network", "users.id", "network.user_id")
+        .leftJoin("users as referrer", "network.referrer_id", "referrer.id");
 
-    ctx.body = { quotas };
-    ctx.status = 200;
+      ctx.body = { quotas };
+      ctx.status = 200;
     } catch (err: any) {
       console.error(err);
       ctx.body = "Internal Server Error";
@@ -1066,8 +1106,7 @@ export class NetworkController implements INetwork {
         .where({ shortcode: urc })
         .returning("*");
       if (userDetails.length == 0) {
-        (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
-          (ctx.status = 400);
+        (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"), (ctx.status = 400);
         return;
       }
       // Fetch wallet balance for the retailer
@@ -1143,7 +1182,7 @@ export class NetworkController implements INetwork {
         distributor_payout,
         reqtime,
       } = ctx.request.body;
-      console.log(ctx.request.body)
+      console.log(ctx.request.body);
       // Validate input parameters
       if (
         !refno ||
@@ -1163,8 +1202,7 @@ export class NetworkController implements INetwork {
         .where({ shortcode: urc })
         .returning("*");
       if (userDetails.length == 0) {
-        (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"),
-          (ctx.status = 400);
+        (ctx.body = "NO_USER_EXIST_WITH_THAT_STATUS_CODE"), (ctx.status = 400);
         return;
       }
 
@@ -1176,7 +1214,7 @@ export class NetworkController implements INetwork {
       // }
 
       // Handle confirmation or reversal based on `pstatus`
-      if (pstatus === 1 || pstatus === '1') {
+      if (pstatus === 1 || pstatus === "1") {
         // Update gibilusers for confirmed policy
         await knex("gibilusers").where({ ak }).update({
           pampt: pamt,
