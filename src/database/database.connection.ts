@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import knex, { type Knex } from 'knex';
+
 
 interface IKnexConfig {
   [key: string]: Knex.Config;

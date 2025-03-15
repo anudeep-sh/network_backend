@@ -1,5 +1,4 @@
-import type { Knex } from "knex";
-
+import knex, { type Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
     return knex.schema.createTable('wallet_history', function(table) {

@@ -163,12 +163,12 @@ router.post(
 );
 
 // Forms routes
+router.get("/form/shortcode", formsController.getFormsByShortCode);
 router.post("/forms", formsController.createForm);
 router.get("/forms", formsController.getForms);
 router.get("/forms/:id", formsController.getFormById);
 router.put("/forms/:id", formsController.updateForm);
 router.delete("/forms/:id", formsController.deleteForm);
-
 // Form options routes
 router.post("/form-options", formsController.createFormOptions);
 router.get(

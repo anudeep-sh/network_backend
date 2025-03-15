@@ -73,6 +73,39 @@ export class FormsController {
     }
   };
 
+  getFormsByShortCode = async (ctx: any) => {
+    try {
+      const { shortcode, page = 1, limit = 100 } = ctx.query;
+      const offset = (page - 1) * limit;
+  
+      let query = knex("forms")
+        .select("*")
+        .whereRaw("userinfo_meta->>'shortcode' = ?", [shortcode]) // Query inside JSON field
+        .orderBy("created_at", "desc");
+  
+      const forms = await query.limit(limit).offset(offset);
+  
+      const totalQuery = knex("forms")
+        .whereRaw("userinfo_meta->>'shortcode' = ?", [shortcode]);
+      const total = await totalQuery.count("id as count").first();
+  
+      ctx.body = {
+        data: forms,
+        pagination: {
+          page,
+          limit,
+          total: total?.count || 0,
+          totalPages: Math.ceil(Number(total?.count || 0) / limit),
+        },
+      };
+      ctx.status = 200;
+    } catch (error) {
+      console.error("Error fetching forms:", error);
+      ctx.status = 500;
+      ctx.body = { message: "Internal server error" };
+    }
+  };
+
   // Get form by ID
   getFormById = async (ctx: any) => {
     try {

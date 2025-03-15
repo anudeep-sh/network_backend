@@ -301,6 +301,7 @@ export class NetworkController implements INetwork {
           "user_quota.level2_quota",
           "user_quota.level3_quota",
           "user_quota.level4_quota",
+          "user_quota.level5_quota",
           "users.id",
           "users.shortcode",
           "users.name",
@@ -445,6 +446,7 @@ export class NetworkController implements INetwork {
               level2_quota: 0,
               level3_quota: 0,
               level4_quota: 0,
+              level5_quota: 0,
             })
             .returning("*");
         }
@@ -677,6 +679,7 @@ export class NetworkController implements INetwork {
             level2_quota: 0,
             level3_quota: 0,
             level4_quota: 0,
+            level5_quota: 0,
           })
           .returning("*");
       }
@@ -692,6 +695,8 @@ export class NetworkController implements INetwork {
         updateData.level3_quota = quota;
       } else if (level === 4) {
         updateData.level4_quota = quota;
+      } else if (level === 5) {
+        updateData.level5_quota = quota;
       }
 
       // Update the specified level's quota
@@ -716,6 +721,7 @@ export class NetworkController implements INetwork {
         "user_quota.level2_quota",
         "user_quota.level3_quota",
         "user_quota.level4_quota",
+        "user_quota.level5_quota",
         "users.id as user_id",
         "users.shortcode",
         "users.name",
@@ -895,10 +901,11 @@ export class NetworkController implements INetwork {
       { level: 2, percentage: 8 },
       { level: 3, percentage: 5 },
       { level: 4, percentage: 3 },
+      { level: 5, percentage: 1 },
     ];
     let finallyCompanywallet = price;
     let userDetailId = userDetails[0].id;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const walletUserId = await knex("network")
         .select("*")
         .where({ user_id: userDetailId });
